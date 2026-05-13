@@ -1,0 +1,783 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "d93ca968-b379-49eb-8998-f62f9abe4d33",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1312,
+        0
+      ],
+      "id": "a836b02d-e607-42c9-bfe1-1a07f3f92924",
+      "name": "Webhook",
+      "webhookId": "d93ca968-b379-49eb-8998-f62f9abe4d33"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "03c131ab-7e2d-4e0a-9923-0a9434790fe5",
+              "name": "Name",
+              "value": "={{ $json.body.data.fields[0].value }}",
+              "type": "string"
+            },
+            {
+              "id": "5a9d29b8-96c5-4bb5-bea1-c50a58b15e1b",
+              "name": "Type",
+              "value": "={{ $json.body.data.fields[1].options.find(opt => opt.id === $json.body.data.fields[1].value[0]).text }}",
+              "type": "string"
+            },
+            {
+              "id": "335794a3-b597-411f-81b4-ed6bac14764c",
+              "name": "Budget",
+              "value": "={{ $json.body.data.fields[2].options.find(opt => opt.id === $json.body.data.fields[2].value[0]).text }}",
+              "type": "string"
+            },
+            {
+              "id": "fb853f8a-a452-4298-8617-585abf636444",
+              "name": "Interest",
+              "value": "={{ $json.body.data.fields[3].value }}",
+              "type": "string"
+            },
+            {
+              "id": "8bdbe7e3-191c-4673-8bc3-a36f67f3aa79",
+              "name": "={{ $json.body.data.fields[4].label }}",
+              "value": "={{ $json.body.data.fields[4].value }}",
+              "type": "number"
+            },
+            {
+              "id": "d0b6c015-2ac4-472d-b7d2-06daf1d1a6fa",
+              "name": "={{ $json.body.data.fields[5].label }}",
+              "value": "={{ $json.body.data.fields[5].value }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -960,
+        0
+      ],
+      "id": "ec2f672a-9c71-4a81-9b9d-ca5bbfd13ba6",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "You are an elite luxury concierge for 'GuestValue'. Your tone is sophisticated, professional, and exclusive. You specialize in high-end villa rentals and premium experiences",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=I have a new guest profile and a system-matched experience. Please generate the concierge outputs based on this specific data:\n\nGUEST DATA:\n\nName: {{ $('Edit Fields').item.json.Name }}\n\nCategory: {{ $('Edit Fields').item.json.Type }}\n\nBudget Level: {{ $('Edit Fields').item.json.Budget }}\n\nInterests: {{ $('Edit Fields').item.json.Interest }}\n\nStay Duration: {{ $('Edit Fields').item.json[\"Stay Duration\"] }} days\n\nLocation: {{ $('Edit Fields').item.json.Destination }}\n\nSCORING ENGINE RESULT:\n\nMatched Experience: {{ $json.fields.Name }}\n\nBase Price: ${{ $json.fields[\"Base Price\"] }}\n\nLuxury Rank: {{ $json.fields[\"Luxury Rank\"] }}/10\n\nINSTRUCTIONS:\n\nGuest Insight: Provide a brief strategy for the concierge on how to upsell specifically based on the guest's budget and the matched experience.\n\nExperiences: List 2-3 supporting premium activities that complement the Matched Experience.\n\nSignature Experience: Create one high-value \"Ultimate Bundle\" featuring the Matched Experience.\n\nWhatsApp EN/FR: Write professional, high-end concierge messages in English and French. Focus on exclusivity and the personal touch.\n\nCRITICAL: Return ONLY a valid JSON object. Do not include markdown formatting or backticks. Use these exact keys: insight, experiences, bundle, message_en, message_fr"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        944,
+        0
+      ],
+      "id": "464e58b3-0482-489c-98eb-a3b9d947125c",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "gpt-4o"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        944,
+        288
+      ],
+      "id": "95f61695-ada1-4279-a467-4cd4bb8ab940",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "OoYoJvKcOcgBHDzp",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rawString = $json.output.replace(/```json|```/g, \"\").trim();\nreturn JSON.parse(rawString);"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1408,
+        0
+      ],
+      "id": "cac620c9-8ba1-4e8c-8b8e-1cd69d97237f",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "jsCode": "const guest = $node[\"Edit Fields\"].json; \nconst interest = (guest.Interest || \"\").toLowerCase();\nconst budget = (guest.Budget || \"Medium\");\n\nconst scored = items.map(item => {\n  let score = 0;\n  const exp = item.json.fields;\n  const expCategory = (exp.Category || \"\");\n\n  // Category + Keyword Match\n  if (expCategory === \"Marine\" && (interest.includes(\"boat\") || interest.includes(\"yacht\") || interest.includes(\"water\"))) {\n    score += 70;\n  } else if (expCategory === \"Air\" && (interest.includes(\"helicopter\") || interest.includes(\"flight\") || interest.includes(\"sky\"))) {\n    score += 70;\n  } else if (expCategory === \"Land\" && (interest.includes(\"villa\") || interest.includes(\"dinner\") || interest.includes(\"land\"))) {\n    score += 70;\n  }\n\n  // Golf/Sport fallback\n  if (interest.includes(\"golf\") || interest.includes(\"sport\")) {\n    if (expCategory === \"Land\") score += 50;\n  }\n\n  // Budget alignment\n  const luxuryRank = exp[\"Luxury Rank\"] || 0;\n  if (budget === \"High\" && luxuryRank >= 7) score += 30;\n  if (budget === \"Ultra\" && luxuryRank >= 9) score += 50;\n\n  item.json.match_score = score;\n  return item;\n});\n\n// If ALL scores are 0, assign random scores so one gets picked\nconst allZero = scored.every(item => item.json.match_score === 0);\nif (allZero) {\n  scored.forEach(item => {\n    item.json.match_score = Math.random();\n  });\n}\n\nreturn scored;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -160,
+        0
+      ],
+      "id": "e3a7fc45-e05b-4c41-addc-376e29180d3a",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        496,
+        0
+      ],
+      "id": "34d08e12-52db-4e7d-91b2-9dbb4bf25e87",
+      "name": "Limit"
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "appLEfQc9WCfepenY",
+          "mode": "list",
+          "cachedResultName": "GUESTVALUE",
+          "cachedResultUrl": "https://airtable.com/appLEfQc9WCfepenY"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbl5XZNTOttzYgjZg",
+          "mode": "list",
+          "cachedResultName": "Clients",
+          "cachedResultUrl": "https://airtable.com/appLEfQc9WCfepenY/tbl5XZNTOttzYgjZg"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Name": "={{ $('Edit Fields').item.json.Name }}",
+            "Budget": "={{ $('Edit Fields').item.json.Budget }}",
+            "Stay Duration": "={{ $('Edit Fields').item.json[\"Stay Duration\"] }}",
+            "Destination": "={{ $('Edit Fields').item.json.Destination }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Budget",
+              "displayName": "Budget",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "High",
+                  "value": "High"
+                },
+                {
+                  "name": "Ultra",
+                  "value": "Ultra"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Stay Duration",
+              "displayName": "Stay Duration",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Destination",
+              "displayName": "Destination",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Recommendation",
+              "displayName": "Recommendation",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        1776,
+        0
+      ],
+      "id": "181ddbba-f492-4828-8cc2-e443dbb1f684",
+      "name": "Client",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "QvM3w7yJUKjR6HXX",
+          "name": "GuesValue"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "appLEfQc9WCfepenY",
+          "mode": "list",
+          "cachedResultName": "GUESTVALUE",
+          "cachedResultUrl": "https://airtable.com/appLEfQc9WCfepenY"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblFWeLXsUWiheLWW",
+          "mode": "list",
+          "cachedResultName": "Massage",
+          "cachedResultUrl": "https://airtable.com/appLEfQc9WCfepenY/tblFWeLXsUWiheLWW"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Draft EN": "={{ $('Code in JavaScript').item.json.message_en }}",
+            "Draft FN": "={{ $('Code in JavaScript').item.json.message_fr }}",
+            "Recommendation": "={{ [$('Recommedation').item.json.id] }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Draft EN",
+              "displayName": "Draft EN",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Draft FN",
+              "displayName": "Draft FN",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Link",
+              "displayName": "Link",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Recommendation",
+              "displayName": "Recommendation",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        2416,
+        0
+      ],
+      "id": "66317324-3398-4793-8a18-599a4439cf4c",
+      "name": "Massage",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "QvM3w7yJUKjR6HXX",
+          "name": "GuesValue"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "appLEfQc9WCfepenY",
+          "mode": "list",
+          "cachedResultName": "GUESTVALUE",
+          "cachedResultUrl": "https://airtable.com/appLEfQc9WCfepenY"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblsn5Bbu8Ebeq5iD",
+          "mode": "list",
+          "cachedResultName": "Sales",
+          "cachedResultUrl": "https://airtable.com/appLEfQc9WCfepenY/tblsn5Bbu8Ebeq5iD"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Final Quote": "={{ $node[\"Limit\"].json.fields[\"Base Price\"] }}",
+            "Recommendation": "={{ [$('Recommedation').item.json.id] }}",
+            "Status": "To-do"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Final Quote",
+              "displayName": "Final Quote",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Recommendation",
+              "displayName": "Recommendation",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "To-do",
+                  "value": "To-do"
+                },
+                {
+                  "name": "In progress",
+                  "value": "In progress"
+                },
+                {
+                  "name": "Done",
+                  "value": "Done"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        2736,
+        0
+      ],
+      "id": "3656ac49-52f9-493c-9767-233672f612b3",
+      "name": "Sales",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "QvM3w7yJUKjR6HXX",
+          "name": "GuesValue"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "appLEfQc9WCfepenY",
+          "mode": "list",
+          "cachedResultName": "GUESTVALUE",
+          "cachedResultUrl": "https://airtable.com/appLEfQc9WCfepenY"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblrILSvoXLbBMwFs",
+          "mode": "list",
+          "cachedResultName": "Recommendation",
+          "cachedResultUrl": "https://airtable.com/appLEfQc9WCfepenY/tblrILSvoXLbBMwFs"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Clients": "={{ [$('Client').item.json.id] }}",
+            "Selected Experience": "={{ [$node[\"Limit\"].json.id] }}",
+            "Match Score": "={{ $node[\"Limit\"].json.match_score }}",
+            "AI Insight": "={{ $('Code in JavaScript').item.json.insight }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "ID",
+              "displayName": "ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Clients",
+              "displayName": "Clients",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Selected Experience",
+              "displayName": "Selected Experience",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Match Score",
+              "displayName": "Match Score",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "AI Insight",
+              "displayName": "AI Insight",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Massage",
+              "displayName": "Massage",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Sales",
+              "displayName": "Sales",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        2128,
+        0
+      ],
+      "id": "63405edf-7dd2-4e45-906d-8777cc4f9efd",
+      "name": "Recommedation",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "QvM3w7yJUKjR6HXX",
+          "name": "GuesValue"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "appLEfQc9WCfepenY",
+          "mode": "list",
+          "cachedResultName": "GUESTVALUE",
+          "cachedResultUrl": "https://airtable.com/appLEfQc9WCfepenY"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbl0LT3v9MEzXcJ2T",
+          "mode": "list",
+          "cachedResultName": "Experiences",
+          "cachedResultUrl": "https://airtable.com/appLEfQc9WCfepenY/tbl0LT3v9MEzXcJ2T"
+        },
+        "options": {},
+        "sort": {
+          "property": []
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        -496,
+        0
+      ],
+      "id": "4ba31cd8-2707-49dd-a3f7-e2bd359f8cda",
+      "name": "Search Record",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "QvM3w7yJUKjR6HXX",
+          "name": "GuesValue"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sortFieldsUi": {
+          "sortField": [
+            {
+              "fieldName": "match_score",
+              "order": "descending"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.sort",
+      "typeVersion": 1,
+      "position": [
+        208,
+        0
+      ],
+      "id": "0d9f8c7a-c5ed-4806-8953-783b26c05b62",
+      "name": "Sort"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Search Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Client",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Sort",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limit": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Client": {
+      "main": [
+        [
+          {
+            "node": "Recommedation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Massage": {
+      "main": [
+        [
+          {
+            "node": "Sales",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recommedation": {
+      "main": [
+        [
+          {
+            "node": "Massage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Record": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sort": {
+      "main": [
+        [
+          {
+            "node": "Limit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "94795451-c29a-4dd6-8def-1863f9a04b76",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8e2ad7959087b46fee7542a4a5f0200a97808956855f3e56a0a638ac529eac08"
+  },
+  "id": "60rzzFGQwuNI9Yxf",
+  "tags": []
+}
